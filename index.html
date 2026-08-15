@@ -27,10 +27,13 @@
     .record-title { font-weight: bold; font-size: 1.1rem; margin-bottom: 4px; }
     .record-score { color: #e53935; font-weight: bold; font-size: 1.2rem; }
     
-    /* チェックボックスと削除ボタン */
-    .toggle-avg { transform: scale(1.5); cursor: pointer; }
-    .delete-btn { background: #ffebee; color: #c62828; border: 1px solid #ffcdd2; padding: 8px 12px; border-radius: 4px; cursor: pointer; font-weight: bold; margin-left: 10px; }
+    /* ボタン類 */
+    .action-btns { display: flex; gap: 8px; }
+    .edit-btn { background: #e8f5e9; color: #2e7d32; border: 1px solid #c8e6c9; padding: 8px 12px; border-radius: 4px; cursor: pointer; font-weight: bold; }
+    .edit-btn:active { background: #c8e6c9; }
+    .delete-btn { background: #ffebee; color: #c62828; border: 1px solid #ffcdd2; padding: 8px 12px; border-radius: 4px; cursor: pointer; font-weight: bold; }
     .delete-btn:active { background: #ffcdd2; }
+    .toggle-avg { transform: scale(1.5); cursor: pointer; }
     
     .empty-msg { text-align: center; color: #888; font-size: 0.9rem; margin-top: 20px; }
   </style>
@@ -84,7 +87,10 @@
               <div class="record-title">${record.title}</div>
               <div class="record-score">${record.score.toFixed(3)} 点</div>
             </div>
-            <button class="delete-btn" onclick="deleteRecord(${originalIndex})">削除</button>
+            <div class="action-btns">
+              <button class="edit-btn" onclick="editRecord(${originalIndex})">修正</button>
+              <button class="delete-btn" onclick="deleteRecord(${originalIndex})">削除</button>
+            </div>
           `;
           container.appendChild(li);
         });
@@ -115,6 +121,36 @@
       titleInput.value = "";
       scoreInput.value = "";
       
+      render();
+    }
+
+    // 記録を修正する機能
+    function editRecord(index) {
+      const currentRecord = records[index];
+      
+      // 曲名の修正ポップアップ
+      const newTitle = prompt("曲名を修正してください", currentRecord.title);
+      if (newTitle === null) return; // キャンセルを押した場合は何もしない
+      
+      // 点数の修正ポップアップ
+      const newScoreStr = prompt("点数を修正してください", currentRecord.score);
+      if (newScoreStr === null) return; // キャンセルを押した場合は何もしない
+      
+      const newScore = parseFloat(newScoreStr);
+
+      // 入力チェック
+      if (newTitle.trim() === "") {
+        alert("曲名が入力されていません。修正を中止しました。");
+        return;
+      }
+      if (isNaN(newScore) || newScore < 0 || newScore > 100) {
+        alert("0〜100の間の正しい点数を入力してください！修正を中止しました。");
+        return;
+      }
+
+      // データを上書きして画面を更新
+      records[index].title = newTitle.trim();
+      records[index].score = newScore;
       render();
     }
 
