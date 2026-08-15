@@ -35,6 +35,10 @@
     .delete-btn:active { background: #ffcdd2; }
     .toggle-avg { transform: scale(1.5); cursor: pointer; }
     
+    /* 一括リセットボタン */
+    .reset-all-btn { width: 100%; padding: 12px; background: #fff; color: #c62828; border: 1px solid #c62828; border-radius: 4px; font-size: 1rem; font-weight: bold; cursor: pointer; margin-top: 20px; margin-bottom: 40px;}
+    .reset-all-btn:active { background: #ffebee; }
+
     .empty-msg { text-align: center; color: #888; font-size: 0.9rem; margin-top: 20px; }
   </style>
 </head>
@@ -58,6 +62,11 @@
   <ul class="record-list" id="listContainer"></ul>
   <div id="emptyMessage" class="empty-msg">まだ記録がありません。</div>
 
+  <!-- 一括リセットボタン -->
+  <div id="resetArea" style="display: none;">
+    <button class="reset-all-btn" onclick="resetAll()">🗑️ すべての記録をリセットする</button>
+  </div>
+
   <script>
     // データを保存する配列（初期読み込み）
     let records = JSON.parse(localStorage.getItem('karaokeData')) || [];
@@ -66,12 +75,16 @@
     function render() {
       const container = document.getElementById("listContainer");
       const emptyMsg = document.getElementById("emptyMessage");
+      const resetArea = document.getElementById("resetArea");
+      
       container.innerHTML = "";
 
       if (records.length === 0) {
         emptyMsg.style.display = "block";
+        resetArea.style.display = "none"; // 記録がない時はリセットボタンを隠す
       } else {
         emptyMsg.style.display = "none";
+        resetArea.style.display = "block"; // 記録がある時はリセットボタンを表示
         
         // 新しい記録が上に来るように逆にループする
         [...records].reverse().forEach((record, reversedIndex) => {
@@ -128,17 +141,14 @@
     function editRecord(index) {
       const currentRecord = records[index];
       
-      // 曲名の修正ポップアップ
       const newTitle = prompt("曲名を修正してください", currentRecord.title);
-      if (newTitle === null) return; // キャンセルを押した場合は何もしない
+      if (newTitle === null) return; 
       
-      // 点数の修正ポップアップ
       const newScoreStr = prompt("点数を修正してください", currentRecord.score);
-      if (newScoreStr === null) return; // キャンセルを押した場合は何もしない
+      if (newScoreStr === null) return; 
       
       const newScore = parseFloat(newScoreStr);
 
-      // 入力チェック
       if (newTitle.trim() === "") {
         alert("曲名が入力されていません。修正を中止しました。");
         return;
@@ -148,7 +158,6 @@
         return;
       }
 
-      // データを上書きして画面を更新
       records[index].title = newTitle.trim();
       records[index].score = newScore;
       render();
@@ -160,11 +169,19 @@
       render();
     }
 
-    // 記録を削除する機能
+    // 記録を1つ削除する機能
     function deleteRecord(index) {
       if (confirm("この記録を削除してもよろしいですか？")) {
         records.splice(index, 1);
         render();
+      }
+    }
+
+    // ★追加: すべての記録を一括リセットする機能
+    function resetAll() {
+      if (confirm("本当にすべての記録をリセットしますか？\n（この操作は元に戻せません！）")) {
+        records = []; // 配列を空っぽにする
+        render();     // 画面を再描画（ここで自動的に保存も上書きされます）
       }
     }
 
@@ -181,7 +198,6 @@
       const total = includedRecords.reduce((sum, r) => sum + r.score, 0);
       const average = total / includedRecords.length;
       
-      // 小数第3位まで表示
       avgDisplay.innerText = average.toFixed(3);
     }
 
