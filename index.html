@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>カラオケ点数記録</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; background: #f0f4f8; margin: 0; padding: 16px; color: #333; }
+    h2 { color: #1e88e5; text-align: center; margin-bottom: 20px; }
+    
+    /* 入力エリア */
+    .input-section { background: #fff; padding: 16px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px; }
+    input[type="text"], input[type="number"] { width: 100%; padding: 10px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 1rem; }
+    button.add-btn { width: 100%; padding: 12px; background: #1e88e5; color: white; border: none; border-radius: 4px; font-size: 1rem; font-weight: bold; cursor: pointer; }
+    button.add-btn:active { background: #1565c0; }
+
+    /* 平均点表示エリア */
+    .average-section { text-align: center; background: #e3f2fd; padding: 16px; border-radius: 8px; font-size: 1.2rem; font-weight: bold; margin-bottom: 20px; color: #0d47a1; }
+    .average-score { font-size: 1.8rem; margin-left: 8px; }
+
+    /* 履歴リスト */
+    .record-list { list-style: none; padding: 0; margin: 0; }
+    .record-card { background: #fff; padding: 12px 16px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between; }
+    .record-card.excluded { opacity: 0.6; background: #f9f9f9; }
+    
+    .record-info { flex-grow: 1; margin-left: 12px; }
+    .record-title { font-weight: bold; font-size: 1.1rem; margin-bottom: 4px; }
+    .record-score { color: #e53935; font-weight: bold; font-size: 1.2rem; }
+    
+    /* チェックボックスと削除ボタン */
+    .toggle-avg { transform: scale(1.5); cursor: pointer; }
+    .delete-btn { background: #ffebee; color: #c62828; border: 1px solid #ffcdd2; padding: 8px 12px; border-radius: 4px; cursor: pointer; font-weight: bold; margin-left: 10px; }
+    .delete-btn:active { background: #ffcdd2; }
+    
+    .empty-msg { text-align: center; color: #888; font-size: 0.9rem; margin-top: 20px; }
+  </style>
+</head>
+<body>
+
+  <h2>🎤 カラオケ記録帳</h2>
+
+  <!-- 入力フォーム -->
+  <div class="input-section">
+    <input type="text" id="songTitle" placeholder="曲名を入力 (例: 残酷な天使のテーゼ)">
+    <input type="number" id="scoreInput" placeholder="点数を入力 (例: 95.123)" step="0.001" min="0" max="100">
+    <button class="add-btn" onclick="addRecord()">記録を追加する</button>
+  </div>
+
+  <!-- 平均点表示 -->
+  <div class="average-section">
+    平均点: <span class="average-score" id="averageDisplay">0.000</span>
+  </div>
+
+  <!-- 履歴表示 -->
+  <ul class="record-list" id="listContainer"></ul>
+  <div id="emptyMessage" class="empty-msg">まだ記録がありません。</div>
+
+  <script>
+    // データを保存する配列（初期読み込み）
+    let records = JSON.parse(localStorage.getItem('karaokeData')) || [];
+
+    // 画面にリストと平均点を描画する機能
+    function render() {
+      const container = document.getElementById("listContainer");
+      const emptyMsg = document.getElementById("emptyMessage");
+      container.innerHTML = "";
+
+      if (records.length === 0) {
+        emptyMsg.style.display = "block";
+      } else {
+        emptyMsg.style.display = "none";
+        
+        // 新しい記録が上に来るように逆にループする
+        [...records].reverse().forEach((record, reversedIndex) => {
+          // 元の配列の正しいインデックスを計算
+          const originalIndex = records.length - 1 - reversedIndex;
+          
+          const li = document.createElement("li");
+          li.className = `record-card ${record.include ? '' : 'excluded'}`;
+          
+          li.innerHTML = `
+            <input type="checkbox" class="toggle-avg" ${record.include ? 'checked' : ''} onchange="toggleInclude(${originalIndex})" title="平均点に含める">
+            <div class="record-info">
+              <div class="record-title">${record.title}</div>
+              <div class="record-score">${record.score.toFixed(3)} 点</div>
+            </div>
+            <button class="delete-btn" onclick="deleteRecord(${originalIndex})">削除</button>
+          `;
+          container.appendChild(li);
+        });
+      }
+      calcAverage();
+      saveData();
+    }
+
+    // 記録を追加する機能
+    function addRecord() {
+      const titleInput = document.getElementById("songTitle");
+      const scoreInput = document.getElementById("scoreInput");
+      const title = titleInput.value.trim();
+      const score = parseFloat(scoreInput.value);
+
+      if (!title) {
+        alert("曲名を入力してください！");
+        return;
+      }
+      if (isNaN(score) || score < 0 || score > 100) {
+        alert("0〜100の間の正しい点数を入力してください！");
+        return;
+      }
+
+      records.push({ title: title, score: score, include: true });
+      
+      // 入力欄を空にする
+      titleInput.value = "";
+      scoreInput.value = "";
+      
+      render();
+    }
+
+    // 平均点に含める/含めないを切り替える機能
+    function toggleInclude(index) {
+      records[index].include = !records[index].include;
+      render();
+    }
+
+    // 記録を削除する機能
+    function deleteRecord(index) {
+      if (confirm("この記録を削除してもよろしいですか？")) {
+        records.splice(index, 1);
+        render();
+      }
+    }
+
+    // 平均点を計算する機能
+    function calcAverage() {
+      const includedRecords = records.filter(r => r.include);
+      const avgDisplay = document.getElementById("averageDisplay");
+
+      if (includedRecords.length === 0) {
+        avgDisplay.innerText = "0.000";
+        return;
+      }
+
+      const total = includedRecords.reduce((sum, r) => sum + r.score, 0);
+      const average = total / includedRecords.length;
+      
+      // 小数第3位まで表示
+      avgDisplay.innerText = average.toFixed(3);
+    }
+
+    // データをブラウザに保存する機能
+    function saveData() {
+      localStorage.setItem('karaokeData', JSON.stringify(records));
+    }
+
+    // 最初に1回描画する
+    render();
+  </script>
+</body>
+</html>
