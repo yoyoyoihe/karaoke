@@ -10,7 +10,7 @@
     
     /* 入力エリア */
     .input-section { background: #fff; padding: 16px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px; }
-    input[type="text"], input[type="number"] { width: 100%; padding: 10px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 1rem; }
+    input[type="text"] { width: 100%; padding: 10px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 1rem; }
     button.add-btn { width: 100%; padding: 12px; background: #1e88e5; color: white; border: none; border-radius: 4px; font-size: 1rem; font-weight: bold; cursor: pointer; }
     button.add-btn:active { background: #1565c0; }
 
@@ -49,7 +49,8 @@
   <!-- 入力フォーム -->
   <div class="input-section">
     <input type="text" id="songTitle" placeholder="曲名を入力 (例: 残酷な天使のテーゼ)">
-    <input type="number" id="scoreInput" placeholder="点数を入力 (例: 95.123)" step="0.001" min="0" max="100">
+    <!-- inputmode="decimal" でスマホの数字キーボードを出し、onblur で指が離れた時に自動補完します -->
+    <input type="text" inputmode="decimal" id="scoreInput" placeholder="点数を入力 (例: 95.123)" onblur="formatInput(this)">
     <button class="add-btn" onclick="addRecord()">記録を追加する</button>
   </div>
 
@@ -68,10 +69,18 @@
   </div>
 
   <script>
-    // データを保存する配列（初期読み込み）
     let records = JSON.parse(localStorage.getItem('karaokeData')) || [];
 
-    // 画面にリストと平均点を描画する機能
+    // 入力欄から指が離れた瞬間に「88.7」を「88.700」に自動補完する機能
+    function formatInput(inputElement) {
+      if (inputElement.value.trim() !== "") {
+        const val = parseFloat(inputElement.value);
+        if (!isNaN(val)) {
+          inputElement.value = val.toFixed(3);
+        }
+      }
+    }
+
     function render() {
       const container = document.getElementById("listContainer");
       const emptyMsg = document.getElementById("emptyMessage");
@@ -81,14 +90,12 @@
 
       if (records.length === 0) {
         emptyMsg.style.display = "block";
-        resetArea.style.display = "none"; // 記録がない時はリセットボタンを隠す
+        resetArea.style.display = "none"; 
       } else {
         emptyMsg.style.display = "none";
-        resetArea.style.display = "block"; // 記録がある時はリセットボタンを表示
+        resetArea.style.display = "block"; 
         
-        // 新しい記録が上に来るように逆にループする
         [...records].reverse().forEach((record, reversedIndex) => {
-          // 元の配列の正しいインデックスを計算
           const originalIndex = records.length - 1 - reversedIndex;
           
           const li = document.createElement("li");
@@ -112,7 +119,6 @@
       saveData();
     }
 
-    // 記録を追加する機能
     function addRecord() {
       const titleInput = document.getElementById("songTitle");
       const scoreInput = document.getElementById("scoreInput");
@@ -130,21 +136,20 @@
 
       records.push({ title: title, score: score, include: true });
       
-      // 入力欄を空にする
       titleInput.value = "";
       scoreInput.value = "";
       
       render();
     }
 
-    // 記録を修正する機能
     function editRecord(index) {
       const currentRecord = records[index];
       
       const newTitle = prompt("曲名を修正してください", currentRecord.title);
       if (newTitle === null) return; 
       
-      const newScoreStr = prompt("点数を修正してください", currentRecord.score);
+      // 修正画面を開いた時も、最初から小数第3位まで表示されるようにしました
+      const newScoreStr = prompt("点数を修正してください", currentRecord.score.toFixed(3));
       if (newScoreStr === null) return; 
       
       const newScore = parseFloat(newScoreStr);
@@ -163,13 +168,11 @@
       render();
     }
 
-    // 平均点に含める/含めないを切り替える機能
     function toggleInclude(index) {
       records[index].include = !records[index].include;
       render();
     }
 
-    // 記録を1つ削除する機能
     function deleteRecord(index) {
       if (confirm("この記録を削除してもよろしいですか？")) {
         records.splice(index, 1);
@@ -177,15 +180,13 @@
       }
     }
 
-    // ★追加: すべての記録を一括リセットする機能
     function resetAll() {
       if (confirm("本当にすべての記録をリセットしますか？\n（この操作は元に戻せません！）")) {
-        records = []; // 配列を空っぽにする
-        render();     // 画面を再描画（ここで自動的に保存も上書きされます）
+        records = [];
+        render();
       }
     }
 
-    // 平均点を計算する機能
     function calcAverage() {
       const includedRecords = records.filter(r => r.include);
       const avgDisplay = document.getElementById("averageDisplay");
@@ -201,12 +202,10 @@
       avgDisplay.innerText = average.toFixed(3);
     }
 
-    // データをブラウザに保存する機能
     function saveData() {
       localStorage.setItem('karaokeData', JSON.stringify(records));
     }
 
-    // 最初に1回描画する
     render();
   </script>
 </body>
